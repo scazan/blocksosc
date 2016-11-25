@@ -72,7 +72,7 @@ class MainComponent   : public Component,
 public:
     MainComponent() : layout(5, 5)
     {
-        setSize(600, 400);
+        setSize(300, 110);
 
         // Register MainContentComponent as a listener to the PhysicalTopologySource object
         topologySource.addListener(this);
@@ -91,8 +91,12 @@ public:
 
     void paint (Graphics& g) override
     {
-        g.fillAll (Colours::purple);
-        g.drawText("Connect Lightpad Block to start sending OSC data to 127.0.0.1 on port 57120. \n/block/touch/on, /block/touch/off, /block/touch,", getLocalBounds(), Justification::centred, false);
+        g.fillAll (Colours::grey);
+        g.drawText("Sending OSC data to 127.0.0.1 on port 57120:", 10, 10, 380, 20, true);
+        g.drawText("/block/lightpad/0/on - (fingerIndex, x, y, z)", 10, 30, 380, 20, true);
+        g.drawText("/block/lightpad/0/off - (fingerIndex)", 10, 45, 380, 20, true);
+        g.drawText("/block/lightpad/0/position - (fingerIndex, x, y, z)", 10, 60, 380, 20, true);
+        g.drawText("/block/lightpad/0/button - (1)", 10, 75, 380, 20, true);
     }
 
     void resized() override {}
@@ -149,6 +153,12 @@ private:
         }
         else if (currentMode == playMode)
         {
+			float touchIndex = (float) touch.index,
+				  startX = (float) touch.startX,
+				  startY = (float) touch.startY,
+				  x = (float) touch.x,
+				  y = (float) touch.y,
+				  z = (float) touch.z;
             // Limit the number of touches per second
             constexpr int maxNumTouchMessagesPerSecond = 100;
             auto now = Time::getCurrentTime();
@@ -158,7 +168,7 @@ private:
             if (touch.isTouchStart)
             {
                 gridProgram->startTouch(touch.startX, touch.startY);
-				if (! sender.send ("/block/touch/on", (float) touch.startX, (float) touch.startY, (float) touch.z))
+				if (! sender.send ("/block/lightpad/0/on", touchIndex, startX/2, startY/2, z/2))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
 
 				//bitmapProgram->setLED(roundToInt((touch.startX/2) * 16), roundToInt((touch.startY/2) * 16), Colours::purple);
@@ -166,7 +176,7 @@ private:
             else if (touch.isTouchEnd)
             {
                 gridProgram->endTouch(touch.startX, touch.startY);
-				if (! sender.send ("/block/touch/off", (float) touch.startX, (float) touch.startY, (float) touch.z))
+				if (! sender.send ("/block/lightpad/0/off", touchIndex))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
 				//bitmapProgram->setLED(roundToInt((touch.startX/2) * 16), roundToInt((touch.startY/2) * 16), Colours::black);
             }
@@ -177,7 +187,7 @@ private:
 
                 gridProgram->sendTouch(touch.x, touch.y, touch.z, layout.touchColour);
 				// xID, yID, x, y, z
-				if (! sender.send ("/block/touch/position", (float) touch.startX, (float) touch.startY, (float) touch.x, (float) touch.y, (float) touch.z))
+				if (! sender.send ("/block/lightpad/0/position", touchIndex, x/2, y/2, z/2))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
             }
 
@@ -200,7 +210,7 @@ private:
     /** Overridden from ControlButton::Listener. Called when a button on the Lightpad is released */
     void buttonReleased (ControlButton&, Block::Timestamp) override
     {
-		if (! sender.send ("/block/button", 1))
+		if (! sender.send ("/block/lightpad/button", 1))
 			showConnectionErrorMessage ("Error: could not send OSC message.");
 
         // Switch modes
