@@ -21,7 +21,6 @@ struct SynthGrid
      */
     void constructGridFillArray()
     {
-		LEDColour colors[3] = {Colours::green, Colours::red, Colours::purple};
         gridFillArray.clear();
 
         for (int i = 0; i < numRows; ++i)
@@ -33,7 +32,6 @@ struct SynthGrid
                 int padNum = (i * 5) + j;
 
 				fill.colour = Colours::black;
-				//fill.colour = colors[i % 3];
 				fill.fillType = DrumPadGridProgram::GridFill::FillType::gradient;
                 gridFillArray.add(fill);
             }
@@ -212,15 +210,6 @@ private:
     {
 		if (! sender.send ("/block/lightpad/button", 1))
 			showConnectionErrorMessage ("Error: could not send OSC message.");
-
-        // Switch modes
-        if (currentMode == waveformSelectionMode)
-            currentMode = playMode;
-        else if (currentMode == playMode)
-            currentMode = waveformSelectionMode;
-
-        // Set the LEDGrid program to the new mode
-        setLEDProgram(activeBlock->getLEDGrid());
     }
 
     void timerCallback() override
