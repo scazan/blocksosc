@@ -12,4 +12,9 @@ Currently transmits OSC messages to localhost, port 57120 with the following mes
 /block/lightpad/0/position - (fingerIndex, x, y, z)
 /block/lightpad/0/button - (1)
 ```
-Early in development in terms of features. Support for multiple-modes and addressing the LEDs over OSC is planned.
+Receives OSC data on port 57140 in order to add "buttons" to the block:
+```
+/block/lightpad/0/addButton - (button index)
+```
+
+Early in development in terms of features. Support for multiple-modes is planned.
