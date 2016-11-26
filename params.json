@@ -1,6 +1,0 @@
-{
-  "name": "BlocksOSC",
-  "tagline": "A program to transmit OSC data directly from the ROLI Lightpad Block",
-  "body": "# BlocksOSC\r\nA program to transmit OSC data directly from the ROLI Lightpad Block.\r\nBy default, it also turns off the LEDs and only uses them to show touch data while performing.\r\n\r\n###[Download BlocksOSC Here](https://github.com/scazan/BlocksOSC/releases)\r\nMac OSX download coming soon\r\n\r\nCurrently transmits OSC messages to localhost, port 57120 with the following messages:\r\n\r\n```\r\n/block/lightpad/0/on - (fingerIndex, x, y, z)\r\n/block/lightpad/0/off - (fingerIndex)\r\n/block/lightpad/0/position - (fingerIndex, x, y, z)\r\n/block/lightpad/0/button - (1)\r\n```\r\nVery early in development. Support for multiple-modes and addressing the LEDs over OSC is planned.\r\n",
-  "note": "Don't delete this file! It's used internally to help with page regeneration."
-}
