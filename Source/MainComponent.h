@@ -7,19 +7,20 @@
 /**
     A struct that handles the setup and layout of the DrumPadGridProgram
 */
+int buttonGrid[5][5] = {{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},};
 struct SynthGrid
 {
     SynthGrid (int cols, int rows)
         : numColumns (cols),
           numRows (rows)
     {
-        constructGridFillArray();
+        constructGridFillArray(buttonGrid);
     }
 
     /** Creates a GridFill object for each pad in the grid and sets its colour
         and fill before adding it to an array of GridFill objects
      */
-    void constructGridFillArray()
+    void constructGridFillArray(int buttonGrid[][5])
     {
         gridFillArray.clear();
 
@@ -30,8 +31,13 @@ struct SynthGrid
                 DrumPadGridProgram::GridFill fill;
 
                 int padNum = (i * 5) + j;
+				if(buttonGrid[i%5][j%5] == 0) {
+					fill.colour = backgroundGridColour;
+				}
+				else {
+					fill.colour = baseGridColour;
+				}
 
-				fill.colour = Colours::black;
 				fill.fillType = DrumPadGridProgram::GridFill::FillType::gradient;
                 gridFillArray.add(fill);
             }
@@ -51,8 +57,9 @@ struct SynthGrid
     float width, height;
 
     Array<DrumPadGridProgram::GridFill> gridFillArray;
-    Colour baseGridColour = Colours::purple;
     Colour touchColour = Colours::purple;
+    Colour baseGridColour = Colours::cyan;
+    Colour backgroundGridColour = Colours::black;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SynthGrid)
@@ -62,6 +69,8 @@ struct SynthGrid
     The main component
 */
 class MainComponent   : public Component,
+						private OSCReceiver,
+						private OSCReceiver::ListenerWithOSCAddress<OSCReceiver::MessageLoopCallback>,
                         public TopologySource::Listener,
                         private TouchSurface::Listener,
                         private ControlButton::Listener,
@@ -70,7 +79,7 @@ class MainComponent   : public Component,
 public:
     MainComponent() : layout(5, 5)
     {
-        setSize(300, 110);
+        setSize(300, 140);
 
         // Register MainContentComponent as a listener to the PhysicalTopologySource object
         topologySource.addListener(this);
@@ -79,6 +88,13 @@ public:
         // specify here where to send OSC messages to: host URL and UDP port number
         if (! sender.connect ("127.0.0.1", 57120))
             showConnectionErrorMessage("Error: could not connect to UDP port 57120.");
+
+        if (! connect(57140))
+            showConnectionErrorMessage ("Error: could not connect to UDP port 57140.");
+
+        // tell the component to listen for OSC messages matching this address:
+        //addListener(this, "/block/lightpad/0/setcolor");
+        addListener(this, "/block/lightpad/0/addButton");
     };
 
     ~MainComponent()
@@ -87,6 +103,14 @@ public:
             detachActiveBlock();
     }
 
+    void oscMessageReceived (const OSCMessage& message) override
+    {
+		if (message.size() == 1 && message[0].isInt32()) {
+			buttonGrid[4][message[0].getInt32()] = 1;
+			layout.constructGridFillArray(buttonGrid);
+			gridProgram->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
+		}
+    }
     void paint (Graphics& g) override
     {
         g.fillAll (Colours::grey);
@@ -95,6 +119,9 @@ public:
         g.drawText("/block/lightpad/0/off - (fingerIndex)", 10, 45, 380, 20, true);
         g.drawText("/block/lightpad/0/position - (fingerIndex, x, y, z)", 10, 60, 380, 20, true);
         g.drawText("/block/lightpad/0/button - (1)", 10, 75, 380, 20, true);
+
+        g.drawText("Receiving OSC data on port 57140:", 10, 95, 380, 20, true);
+        g.drawText("/block/lightpad/0/addButton - (button index)", 10, 110, 480, 20, true);
     }
 
     void resized() override {}
@@ -208,7 +235,7 @@ private:
     /** Overridden from ControlButton::Listener. Called when a button on the Lightpad is released */
     void buttonReleased (ControlButton&, Block::Timestamp) override
     {
-		if (! sender.send ("/block/lightpad/button", 1))
+		if (! sender.send ("/block/lightpad/0/button", 1))
 			showConnectionErrorMessage ("Error: could not send OSC message.");
     }
 
@@ -311,7 +338,7 @@ private:
 
 			//bitmapProgram->setLED(5, 5, Colours::green);
             // Setup the grid layout
-			//gridProgram->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
+			gridProgram->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
         }
     }
 
