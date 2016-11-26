@@ -4,7 +4,6 @@ By default, it also turns off the LEDs and only uses them to show touch data whi
 
 
 ###[Download BlocksOSC Here](https://github.com/scazan/BlocksOSC/releases)
-Mac OSX download coming soon
 
 Currently transmits OSC messages to localhost, port 57120 with the following messages:
 
