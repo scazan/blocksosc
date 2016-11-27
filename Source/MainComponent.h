@@ -17,6 +17,45 @@ struct SynthGrid
         constructGridFillArray(buttonGrid);
     }
 
+	Colour getColorFromIndex(int colorIndex) 
+	{
+		Colour result = Colours::black;
+
+		switch(colorIndex)
+		{
+			case 0:
+				result = backgroundGridColour;
+				break;
+			case 1:
+				result = Colours::red;
+				break;
+			case 2:
+				result = Colours::orange;
+				break;
+			case 3:
+				result = Colours::yellow;
+				break;
+			case 4:
+				result = Colours::green;
+				break;
+			case 5:
+				result = Colours::cyan;
+				break;
+			case 6:
+				result = Colours::blue;
+				break;
+			case 7:
+				result = Colours::purple;
+				break;
+			case 8:
+				result = Colours::white;
+				break;
+			default:
+				result = Colours::black;
+		}
+
+		return result;
+	}
     /** Creates a GridFill object for each pad in the grid and sets its colour
         and fill before adding it to an array of GridFill objects
      */
@@ -30,39 +69,8 @@ struct SynthGrid
             {
                 DrumPadGridProgram::GridFill fill;
 				int colorIndex = buttonGrid[i%5][j%5];
+				fill.colour = getColorFromIndex(colorIndex);
 
-				switch(colorIndex)
-				{
-					case 0:
-						fill.colour = backgroundGridColour;
-						break;
-					case 1:
-						fill.colour = Colours::red;
-						break;
-					case 2:
-						fill.colour = Colours::orange;
-						break;
-					case 3:
-						fill.colour = Colours::yellow;
-						break;
-					case 4:
-						fill.colour = Colours::green;
-						break;
-					case 5:
-						fill.colour = Colours::cyan;
-						break;
-					case 6:
-						fill.colour = Colours::blue;
-						break;
-					case 7:
-						fill.colour = Colours::purple;
-						break;
-					case 8:
-						fill.colour = Colours::white;
-						break;
-					default:
-						fill.colour = Colours::black;
-				}
 
 				fill.fillType = DrumPadGridProgram::GridFill::FillType::gradient;
                 gridFillArray.add(fill);
@@ -119,7 +127,6 @@ public:
             showConnectionErrorMessage ("Error: could not connect to UDP port 57140.");
 
         // tell the component to listen for OSC messages matching this address:
-        //addListener(this, "/block/lightpad/0/setcolor");
         addListener(this, "/block/lightpad/0/addButton");
     };
 
@@ -261,12 +268,15 @@ private:
             "OK");
     }
     /** Overridden from ControlButton::Listener. Called when a button on the Lightpad is pressed */
-    void buttonPressed (ControlButton&, Block::Timestamp) override {}
+    void buttonPressed (ControlButton&, Block::Timestamp) override {
+		if (! sender.send ("/block/lightpad/0/button", 1))
+			showConnectionErrorMessage ("Error: could not send OSC message.");
+	}
 
     /** Overridden from ControlButton::Listener. Called when a button on the Lightpad is released */
     void buttonReleased (ControlButton&, Block::Timestamp) override
     {
-		if (! sender.send ("/block/lightpad/0/button", 1))
+		if (! sender.send ("/block/lightpad/0/button", 0))
 			showConnectionErrorMessage ("Error: could not send OSC message.");
     }
 

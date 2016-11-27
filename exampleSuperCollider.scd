@@ -23,6 +23,9 @@ NetAddr.langPort; // Make sure your language port is 57120
 
 		["ON", touchID, x, y, z ].postln;
 
+		// If you want to know which button was pressed, see which area was pressed
+		[x.quantize(1,0.5), y.quantize(1,0.5)].postln;
+
 	}, '/block/lightpad/0/on');
 
 	OSCdef(\blockOff, { | msg |
@@ -43,7 +46,5 @@ NetAddr.langPort; // Make sure your language port is 57120
 
 // Adding buttons to the grid (purely visual)
 n = NetAddr.new("127.0.0.1", 57140);
-n.sendMsg("/block/lightpad/0/addButton", 0, 2, 8); // Add a button at the bottom row at index 2 (middle of the lightpad)
-
-
+n.sendMsg("/block/lightpad/0/addButton", 4, 2, 7); // Add a button at the bottom row at index 2 (middle of the lightpad)
 
