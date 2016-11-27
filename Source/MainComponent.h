@@ -29,13 +29,39 @@ struct SynthGrid
             for (int j = 0; j < numColumns; ++j)
             {
                 DrumPadGridProgram::GridFill fill;
+				int colorIndex = buttonGrid[i%5][j%5];
 
-                int padNum = (i * 5) + j;
-				if(buttonGrid[i%5][j%5] == 0) {
-					fill.colour = backgroundGridColour;
-				}
-				else {
-					fill.colour = baseGridColour;
+				switch(colorIndex)
+				{
+					case 0:
+						fill.colour = backgroundGridColour;
+						break;
+					case 1:
+						fill.colour = Colours::red;
+						break;
+					case 2:
+						fill.colour = Colours::orange;
+						break;
+					case 3:
+						fill.colour = Colours::yellow;
+						break;
+					case 4:
+						fill.colour = Colours::green;
+						break;
+					case 5:
+						fill.colour = Colours::cyan;
+						break;
+					case 6:
+						fill.colour = Colours::blue;
+						break;
+					case 7:
+						fill.colour = Colours::purple;
+						break;
+					case 8:
+						fill.colour = Colours::white;
+						break;
+					default:
+						fill.colour = Colours::black;
 				}
 
 				fill.fillType = DrumPadGridProgram::GridFill::FillType::gradient;
@@ -105,8 +131,13 @@ public:
 
     void oscMessageReceived (const OSCMessage& message) override
     {
-		if (message.size() == 1 && message[0].isInt32()) {
-			buttonGrid[4][message[0].getInt32()] = 1;
+		// Only do something if there are 3 messages coming in
+		if (message.size() == 3 && message[0].isInt32()) {
+			int x = message[0].getInt32();
+			int y = message[1].getInt32();
+			int color = message[2].getInt32();
+
+			buttonGrid[x][y] = color;
 			layout.constructGridFillArray(buttonGrid);
 			gridProgram->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
 		}
@@ -193,7 +224,7 @@ private:
             if (touch.isTouchStart)
             {
                 gridProgram->startTouch(touch.startX, touch.startY);
-				if (! sender.send ("/block/lightpad/0/on", touchIndex, startX/2, startY/2, z/2))
+				if (! sender.send ("/block/lightpad/0/on", touchIndex, startX/2, startY/2, z))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
 
 				//bitmapProgram->setLED(roundToInt((touch.startX/2) * 16), roundToInt((touch.startY/2) * 16), Colours::purple);
@@ -212,7 +243,7 @@ private:
 
                 gridProgram->sendTouch(touch.x, touch.y, touch.z, layout.touchColour);
 				// xID, yID, x, y, z
-				if (! sender.send ("/block/lightpad/0/position", touchIndex, x/2, y/2, z/2))
+				if (! sender.send ("/block/lightpad/0/position", touchIndex, x/2, y/2, z))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
             }
 
