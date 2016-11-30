@@ -46,12 +46,12 @@ NetAddr.langPort; // Make sure your language port is 57120
 
 // Adding buttons to the grid (purely visual)
 n = NetAddr.new("127.0.0.1", 57140);
-		n.sendMsg("/block/lightpad/0/addButton", 4, 0, 8); // Add a button at the bottom row at index 2 (middle of the lightpad)
+		n.sendMsg("/block/lightpad/0/setButton", 4, 0, 8); // Add a button on the first block at the bottom row at index 2 (middle of the lightpad)
 (
 5.do({ | i |
 
 	5.do({ | k |
-		n.sendMsg("/block/lightpad/0/addButton", i, k, 1); // Add a button at the bottom row at index 2 (middle of the lightpad)
+		n.sendMsg("/block/lightpad/0/setButton", i, k, 1); // Add a button on the first block at the bottom row at index 2 (middle of the lightpad)
 	});
 });
 )
@@ -59,7 +59,7 @@ n = NetAddr.new("127.0.0.1", 57140);
 5.do({ | i |
 
 	5.do({ | k |
-		n.sendMsg("/block/lightpad/0/addButton", i, k, 0); // Add a button at the bottom row at index 2 (middle of the lightpad)
+		n.sendMsg("/block/lightpad/1/setButton", i, k, 0); // Add a button on the second block at the bottom row at index 2 (middle of the lightpad)
 	});
 });
 )

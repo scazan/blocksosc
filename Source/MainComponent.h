@@ -7,7 +7,8 @@
 /**
     A struct that handles the setup and layout of the DrumPadGridProgram
 */
-int buttonGrid[5][5] = {{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},};
+int buttonGrid[5][5] = {{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}};
+int buttonGrid2[5][5] = {{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}};
 int blockUIDs[2] = {0,0};
 struct SynthGrid
 {
@@ -92,7 +93,7 @@ struct SynthGrid
     float width, height;
 
     Array<DrumPadGridProgram::GridFill> gridFillArray;
-    Colour touchColour = Colours::purple;
+    Colour touchColour = Colours::white;
     Colour baseGridColour = Colours::cyan;
     Colour backgroundGridColour = Colours::black;
 
@@ -127,7 +128,8 @@ public:
             showConnectionErrorMessage ("Error: could not connect to UDP port 57140.");
 
         // tell the component to listen for OSC messages matching this address:
-        addListener(this, "/block/lightpad/0/addButton");
+        addListener(this, "/block/lightpad/0/setButton");
+        addListener(this, "/block/lightpad/1/setButton");
     };
 
     ~MainComponent()
@@ -138,15 +140,30 @@ public:
 
     void oscMessageReceived (const OSCMessage& message) override
     {
-		// Only do something if there are 3 messages coming in
-		if (message.size() == 3 && message[0].isInt32()) {
-			int x = message[0].getInt32();
-			int y = message[1].getInt32();
-			int color = message[2].getInt32();
 
-			buttonGrid[x][y] = color;
-			layout.constructGridFillArray(buttonGrid);
-			(gridPrograms[0])->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
+		if(message.getAddressPattern().toString() == "/block/lightpad/1/setButton") {
+			// Only do something if there are 3 messages coming in
+			if (message.size() == 3 && message[0].isInt32()) {
+				int x = message[0].getInt32();
+				int y = message[1].getInt32();
+				int color = message[2].getInt32();
+
+				buttonGrid2[x][y] = color;
+				layout.constructGridFillArray(buttonGrid2);
+				(gridPrograms[1])->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
+			}
+		}
+		else if(message.getAddressPattern().toString() == "/block/lightpad/0/setButton") {
+			// Only do something if there are 3 messages coming in
+			if (message.size() == 3 && message[0].isInt32()) {
+				int x = message[0].getInt32();
+				int y = message[1].getInt32();
+				int color = message[2].getInt32();
+
+				buttonGrid[x][y] = color;
+				layout.constructGridFillArray(buttonGrid);
+				(gridPrograms[0])->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
+			}
 		}
     }
     void paint (Graphics& g) override
@@ -201,6 +218,10 @@ public:
 				// NEED A SAFETY HERE
 				blockUIDs[blockIndex] = b->uid;
 				blockIndex++;
+
+				if(blockIndex == 2) {
+					break;
+				}
             }
         }
     }
