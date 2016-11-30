@@ -282,7 +282,7 @@ private:
 
 				const std::string patternString = "/block/lightpad/" + blockIndex + "/off";
 				OSCAddressPattern pattern = OSCAddressPattern(patternString);
-				if (! sender.send (pattern, touchIndex))
+				if (! sender.send (pattern, touchIndex, x/2, y/2))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
 				//bitmapProgram->setLED(roundToInt((touch.startX/2) * 16), roundToInt((touch.startY/2) * 16), Colours::black);
             }
