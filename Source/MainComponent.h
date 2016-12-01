@@ -7,19 +7,61 @@
 /**
     A struct that handles the setup and layout of the DrumPadGridProgram
 */
+int buttonGrid[5][5] = {{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}};
+int buttonGrid2[5][5] = {{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}};
+int blockUIDs[2] = {0,0};
 struct SynthGrid
 {
     SynthGrid (int cols, int rows)
         : numColumns (cols),
           numRows (rows)
     {
-        constructGridFillArray();
+        constructGridFillArray(buttonGrid);
     }
 
+	Colour getColorFromIndex(int colorIndex) 
+	{
+		Colour result = Colours::black;
+
+		switch(colorIndex)
+		{
+			case 0:
+				result = backgroundGridColour;
+				break;
+			case 1:
+				result = Colours::red;
+				break;
+			case 2:
+				result = Colours::orange;
+				break;
+			case 3:
+				result = Colours::yellow;
+				break;
+			case 4:
+				result = Colours::green;
+				break;
+			case 5:
+				result = Colours::cyan;
+				break;
+			case 6:
+				result = Colours::blue;
+				break;
+			case 7:
+				result = Colours::purple;
+				break;
+			case 8:
+				result = Colours::white;
+				break;
+			default:
+				result = Colours::black;
+		}
+
+		return result;
+	}
     /** Creates a GridFill object for each pad in the grid and sets its colour
         and fill before adding it to an array of GridFill objects
      */
-    void constructGridFillArray()
+    void constructGridFillArray(int buttonGrid[][5])
     {
         gridFillArray.clear();
 
@@ -28,10 +70,10 @@ struct SynthGrid
             for (int j = 0; j < numColumns; ++j)
             {
                 DrumPadGridProgram::GridFill fill;
+				int colorIndex = buttonGrid[i%5][j%5];
+				fill.colour = getColorFromIndex(colorIndex);
 
-                int padNum = (i * 5) + j;
 
-				fill.colour = Colours::black;
 				fill.fillType = DrumPadGridProgram::GridFill::FillType::gradient;
                 gridFillArray.add(fill);
             }
@@ -51,8 +93,9 @@ struct SynthGrid
     float width, height;
 
     Array<DrumPadGridProgram::GridFill> gridFillArray;
-    Colour baseGridColour = Colours::purple;
-    Colour touchColour = Colours::purple;
+    Colour touchColour = Colours::white;
+    Colour baseGridColour = Colours::cyan;
+    Colour backgroundGridColour = Colours::black;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SynthGrid)
@@ -62,6 +105,8 @@ struct SynthGrid
     The main component
 */
 class MainComponent   : public Component,
+						private OSCReceiver,
+						private OSCReceiver::ListenerWithOSCAddress<OSCReceiver::MessageLoopCallback>,
                         public TopologySource::Listener,
                         private TouchSurface::Listener,
                         private ControlButton::Listener,
@@ -70,15 +115,21 @@ class MainComponent   : public Component,
 public:
     MainComponent() : layout(5, 5)
     {
-        setSize(300, 110);
+        setSize(300, 140);
 
         // Register MainContentComponent as a listener to the PhysicalTopologySource object
         topologySource.addListener(this);
 
-        generateWaveshapes();
         // specify here where to send OSC messages to: host URL and UDP port number
         if (! sender.connect ("127.0.0.1", 57120))
             showConnectionErrorMessage("Error: could not connect to UDP port 57120.");
+
+        if (! connect(57140))
+            showConnectionErrorMessage ("Error: could not connect to UDP port 57140.");
+
+        // tell the component to listen for OSC messages matching this address:
+        addListener(this, "/block/lightpad/0/setButton");
+        addListener(this, "/block/lightpad/1/setButton");
     };
 
     ~MainComponent()
@@ -87,6 +138,34 @@ public:
             detachActiveBlock();
     }
 
+    void oscMessageReceived (const OSCMessage& message) override
+    {
+
+		if(message.getAddressPattern().toString() == "/block/lightpad/1/setButton") {
+			// Only do something if there are 3 messages coming in
+			if (message.size() == 3 && message[0].isInt32()) {
+				int x = message[0].getInt32();
+				int y = message[1].getInt32();
+				int color = message[2].getInt32();
+
+				buttonGrid2[x][y] = color;
+				layout.constructGridFillArray(buttonGrid2);
+				(gridPrograms[1])->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
+			}
+		}
+		else if(message.getAddressPattern().toString() == "/block/lightpad/0/setButton") {
+			// Only do something if there are 3 messages coming in
+			if (message.size() == 3 && message[0].isInt32()) {
+				int x = message[0].getInt32();
+				int y = message[1].getInt32();
+				int color = message[2].getInt32();
+
+				buttonGrid[x][y] = color;
+				layout.constructGridFillArray(buttonGrid);
+				(gridPrograms[0])->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
+			}
+		}
+    }
     void paint (Graphics& g) override
     {
         g.fillAll (Colours::grey);
@@ -95,6 +174,9 @@ public:
         g.drawText("/block/lightpad/0/off - (fingerIndex)", 10, 45, 380, 20, true);
         g.drawText("/block/lightpad/0/position - (fingerIndex, x, y, z)", 10, 60, 380, 20, true);
         g.drawText("/block/lightpad/0/button - (1)", 10, 75, 380, 20, true);
+
+        g.drawText("Receiving OSC data on port 57140:", 10, 95, 380, 20, true);
+        g.drawText("/block/lightpad/0/addButton - (button index)", 10, 110, 480, 20, true);
     }
 
     void resized() override {}
@@ -109,6 +191,7 @@ public:
         // Get the array of currently connected Block objects from the PhysicalTopologySource
         Block::Array blocks = topologySource.getCurrentTopology().blocks;
 
+		int blockIndex = 0;
         // Iterate over the array of Block objects
         for (auto b : blocks)
         {
@@ -128,10 +211,17 @@ public:
                 // Get the LEDGrid object from the Lightpad and set its program to the program for the current mode
                 if (auto grid = activeBlock->getLEDGrid())
                 {
-                    setLEDProgram(grid);
+                    setLEDProgram(blockIndex, grid);
                 }
 
-                break;
+                //break;
+				// NEED A SAFETY HERE
+				blockUIDs[blockIndex] = b->uid;
+				blockIndex++;
+
+				if(blockIndex == 2) {
+					break;
+				}
             }
         }
     }
@@ -139,8 +229,20 @@ public:
 private:
     OSCSender sender;
     /** Overridden from TouchSurface::Listener. Called when a Touch is received on the Lightpad */
-    void touchChanged (TouchSurface&, const TouchSurface::Touch& touch) override
+    void touchChanged (TouchSurface& surface, const TouchSurface::Touch& touch) override
     {
+
+		int blockIndexInt = 0;
+
+		///Get the index of the UID (refactor into a function)
+		for(int i=0; i < 2; i++) {
+			if(blockUIDs[i] == (int)surface.block.uid) {
+				blockIndexInt = i;
+			}
+		}
+
+		std::string blockIndex = std::to_string(blockIndexInt);
+
         if (currentMode == waveformSelectionMode && touch.isTouchStart)
         {
             // Change the displayed waveshape to the next one
@@ -165,16 +267,22 @@ private:
             // Send the touch event to the DrumPadGridProgram and Audio class
             if (touch.isTouchStart)
             {
-                gridProgram->startTouch(touch.startX, touch.startY);
-				if (! sender.send ("/block/lightpad/0/on", touchIndex, startX/2, startY/2, z/2))
+                gridPrograms[blockIndexInt]->startTouch(touch.startX, touch.startY);
+
+				const std::string patternString = "/block/lightpad/" + blockIndex + "/on";
+				OSCAddressPattern pattern = OSCAddressPattern(patternString);
+				if (! sender.send (pattern, touchIndex, startX/2, startY/2, z))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
 
 				//bitmapProgram->setLED(roundToInt((touch.startX/2) * 16), roundToInt((touch.startY/2) * 16), Colours::purple);
             }
             else if (touch.isTouchEnd)
             {
-                gridProgram->endTouch(touch.startX, touch.startY);
-				if (! sender.send ("/block/lightpad/0/off", touchIndex))
+                (gridPrograms[blockIndexInt])->endTouch(touch.startX, touch.startY);
+
+				const std::string patternString = "/block/lightpad/" + blockIndex + "/off";
+				OSCAddressPattern pattern = OSCAddressPattern(patternString);
+				if (! sender.send (pattern, touchIndex, x/2, y/2))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
 				//bitmapProgram->setLED(roundToInt((touch.startX/2) * 16), roundToInt((touch.startY/2) * 16), Colours::black);
             }
@@ -183,9 +291,12 @@ private:
                 if (touchMessageTimesInLastSecond.size() > maxNumTouchMessagesPerSecond / 3)
                     return;
 
-                gridProgram->sendTouch(touch.x, touch.y, touch.z, layout.touchColour);
+                gridPrograms[blockIndexInt]->sendTouch(touch.x, touch.y, touch.z, layout.touchColour);
 				// xID, yID, x, y, z
-				if (! sender.send ("/block/lightpad/0/position", touchIndex, x/2, y/2, z/2))
+
+				const std::string patternString = "/block/lightpad/" + blockIndex + "/position";
+				OSCAddressPattern pattern = OSCAddressPattern(patternString);
+				if (! sender.send (pattern, touchIndex, x/2, y/2, z))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
             }
 
@@ -203,12 +314,15 @@ private:
             "OK");
     }
     /** Overridden from ControlButton::Listener. Called when a button on the Lightpad is pressed */
-    void buttonPressed (ControlButton&, Block::Timestamp) override {}
+    void buttonPressed (ControlButton&, Block::Timestamp) override {
+		if (! sender.send ("/block/lightpad/0/button", 1))
+			showConnectionErrorMessage ("Error: could not send OSC message.");
+	}
 
     /** Overridden from ControlButton::Listener. Called when a button on the Lightpad is released */
     void buttonReleased (ControlButton&, Block::Timestamp) override
     {
-		if (! sender.send ("/block/lightpad/button", 1))
+		if (! sender.send ("/block/lightpad/0/button", 0))
 			showConnectionErrorMessage ("Error: could not send OSC message.");
     }
 
@@ -283,87 +397,22 @@ private:
     }
 
     /** Sets the LEDGrid Program for the selected mode */
-    void setLEDProgram(LEDGrid* grid)
+    void setLEDProgram(int blockIndex, LEDGrid* grid)
     {
-        if (currentMode == waveformSelectionMode)
-        {
-            // Create a new BitmapLEDProgram for the LEDGrid
-            bitmapProgram = new BitmapLEDProgram (*grid);
+		// Stop the redraw timer
+		stopTimer();
 
-            // Set the LEDGrid program
-            grid->setProgram (bitmapProgram);
+		// Create a new DrumPadGridProgram for the LEDGrid
+		gridPrograms[blockIndex] = new DrumPadGridProgram(*grid);
 
-            // Redraw at 25Hz
-            startTimerHz (25);
-        }
-        else if (currentMode == playMode)
-        {
-            // Stop the redraw timer
-            stopTimer();
+		// Set the LEDGrid program
+		grid->setProgram(gridPrograms[blockIndex]);
+		//bitmapProgram = new BitmapLEDProgram (*grid);
+		//grid->setProgram(bitmapProgram);
 
-            // Create a new DrumPadGridProgram for the LEDGrid
-            gridProgram = new DrumPadGridProgram(*grid);
-
-            // Set the LEDGrid program
-			grid->setProgram(gridProgram);
-            //bitmapProgram = new BitmapLEDProgram (*grid);
-            //grid->setProgram(bitmapProgram);
-
-			//bitmapProgram->setLED(5, 5, Colours::green);
-            // Setup the grid layout
-			//gridProgram->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
-        }
-    }
-
-    /** Generates the X and Y co-ordiantes for 1.5 cycles of each of the 4 waveshapes and stores them in arrays */
-    void generateWaveshapes()
-    {
-        // Set current phase position to 0 and work out the required phase increment for one cycle
-        double currentPhase = 0.0;
-        double phaseInc = (1.0 / 30.0) * (2.0 * double_Pi);
-
-        for (int x = 0; x < 30; ++x)
-        {
-            // Scale and offset the sin output to the Lightpad display
-            double sineOutput = sin (currentPhase);
-            sineWaveY[x] = roundToInt ((sineOutput * 6.5) + 7.0);
-
-            // Square wave output, set flags for when vertical line should be drawn
-            if (currentPhase < double_Pi)
-            {
-                if (x == 0)
-                    squareWaveY[x] = -1;
-                else
-                    squareWaveY[x] = 1;
-            }
-            else
-            {
-                if (squareWaveY[x - 1] == 1)
-                    squareWaveY[x - 1] = -1;
-
-                squareWaveY[x] = 13;
-            }
-
-            // Saw wave output, set flags for when vertical line should be drawn
-            sawWaveY[x] = 14 - ((x / 2) % 15);
-            if (sawWaveY[x] == 0 && sawWaveY[x - 1] != -1)
-                sawWaveY[x] = -1;
-
-            // Triangle wave output
-            triangleWaveY[x] = x < 15 ? x : 14 - (x % 15);
-
-            // Add half cycle to end of array so it loops correctly
-            if (x < 15)
-            {
-                sineWaveY[x + 30] = sineWaveY[x];
-                squareWaveY[x + 30] = squareWaveY[x];
-                sawWaveY[x + 30] = sawWaveY[x];
-                triangleWaveY[x + 30] = triangleWaveY[x];
-            }
-
-            // Increment the current phase
-            currentPhase += phaseInc;
-        }
+		//bitmapProgram->setLED(5, 5, Colours::green);
+		// Setup the grid layout
+		(gridPrograms[blockIndex])->setGridFills(layout.numColumns, layout.numRows, layout.gridFillArray);
     }
 
     /** Draws a 'circle' on the Lightpad around an origin co-ordinate */
@@ -371,18 +420,18 @@ private:
     {
         bitmapProgram->setLED (x0, y0, waveshapeColour);
 
-        //const uint32 minLedIndex = 0;
-        //const uint32 maxLedIndex = 14;
+		const uint32 minLedIndex = 0;
+		const uint32 maxLedIndex = 14;
 
-        //bitmapProgram->setLED (jmin (x0 + 1, maxLedIndex), y0, waveshapeColour.withBrightness(0.4f));
-        //bitmapProgram->setLED (jmax (x0 - 1, minLedIndex), y0, waveshapeColour.withBrightness(0.4f));
-        //bitmapProgram->setLED (x0, jmin (y0 + 1, maxLedIndex), waveshapeColour.withBrightness(0.4f));
-        //bitmapProgram->setLED (x0, jmax (y0 - 1, minLedIndex), waveshapeColour.withBrightness(0.4f));
+		bitmapProgram->setLED (jmin (x0 + 1, maxLedIndex), y0, waveshapeColour.withBrightness(0.4f));
+		bitmapProgram->setLED (jmax (x0 - 1, minLedIndex), y0, waveshapeColour.withBrightness(0.4f));
+		bitmapProgram->setLED (x0, jmin (y0 + 1, maxLedIndex), waveshapeColour.withBrightness(0.4f));
+		bitmapProgram->setLED (x0, jmax (y0 - 1, minLedIndex), waveshapeColour.withBrightness(0.4f));
 
-        //bitmapProgram->setLED (jmin (x0 + 1, maxLedIndex), jmin (y0 + 1, maxLedIndex), waveshapeColour.withBrightness(0.1f));
-        //bitmapProgram->setLED (jmin (x0 + 1, maxLedIndex), jmax (y0 - 1, minLedIndex), waveshapeColour.withBrightness(0.1f));
-        //bitmapProgram->setLED (jmax (x0 - 1, minLedIndex), jmin (y0 + 1, maxLedIndex), waveshapeColour.withBrightness(0.1f));
-        //bitmapProgram->setLED (jmax (x0 - 1, minLedIndex), jmax (y0 - 1, minLedIndex), waveshapeColour.withBrightness(0.1f));
+		bitmapProgram->setLED (jmin (x0 + 1, maxLedIndex), jmin (y0 + 1, maxLedIndex), waveshapeColour.withBrightness(0.1f));
+		bitmapProgram->setLED (jmin (x0 + 1, maxLedIndex), jmax (y0 - 1, minLedIndex), waveshapeColour.withBrightness(0.1f));
+		bitmapProgram->setLED (jmax (x0 - 1, minLedIndex), jmin (y0 + 1, maxLedIndex), waveshapeColour.withBrightness(0.1f));
+		bitmapProgram->setLED (jmax (x0 - 1, minLedIndex), jmax (y0 - 1, minLedIndex), waveshapeColour.withBrightness(0.1f));
     }
 
     /**
@@ -397,7 +446,7 @@ private:
 
     //==============================================================================
 
-    DrumPadGridProgram* gridProgram;
+    DrumPadGridProgram* gridPrograms[2];
     BitmapLEDProgram* bitmapProgram;
 
     SynthGrid layout;
