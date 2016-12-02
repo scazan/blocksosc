@@ -74,7 +74,12 @@ struct SynthGrid
 				fill.colour = getColorFromIndex(colorIndex);
 
 
-				fill.fillType = DrumPadGridProgram::GridFill::FillType::gradient;
+				if(colorIndex == 0) {
+					fill.fillType = DrumPadGridProgram::GridFill::FillType::pizzaHollow;
+				}
+				else {
+					fill.fillType = DrumPadGridProgram::GridFill::FillType::gradient;
+				}
                 gridFillArray.add(fill);
             }
         }
@@ -115,7 +120,7 @@ class MainComponent   : public Component,
 public:
     MainComponent() : layout(5, 5)
     {
-        setSize(300, 140);
+        setSize(350, 190);
 
         // Register MainContentComponent as a listener to the PhysicalTopologySource object
         topologySource.addListener(this);
@@ -176,7 +181,10 @@ public:
         g.drawText("/block/lightpad/0/button - (1)", 10, 75, 380, 20, true);
 
         g.drawText("Receiving OSC data on port 57140:", 10, 95, 380, 20, true);
-        g.drawText("/block/lightpad/0/addButton - (button index)", 10, 110, 480, 20, true);
+        g.drawText("You can create buttons (or set them black) by sending", 10, 110, 480, 20, true);
+        g.drawText("to port 57140. There is a 5x5 grid of button possibilities.", 10, 125, 480, 20, true);
+        g.drawText("/block/lightpad/0/setButton - (x, y, color)", 10, 140, 480, 20, true);
+        g.drawText("/block/lightpad/1/setButton - (x, y, color)", 10, 155, 480, 20, true);
     }
 
     void resized() override {}
@@ -216,11 +224,12 @@ public:
 
                 //break;
 				// NEED A SAFETY HERE
-				blockUIDs[blockIndex] = b->uid;
-				blockIndex++;
+				if(blockIndex < 2) {
+					blockUIDs[blockIndex] = b->uid;
+					std::cout << "found block" << blockIndex << std::endl;
+					blockIndex++;
 
-				if(blockIndex == 2) {
-					break;
+					//break;
 				}
             }
         }
@@ -267,7 +276,16 @@ private:
             // Send the touch event to the DrumPadGridProgram and Audio class
             if (touch.isTouchStart)
             {
-                gridPrograms[blockIndexInt]->startTouch(touch.startX, touch.startY);
+				int padX=0,
+					padY=0;
+
+				padX = (int)(touch.startX/0.4);
+				padY = (int)(touch.startY/0.4);
+
+				// TODO: THIS IS WEIRD. Why are the x,y values inverting. INVESTIGATE
+				if(buttonGrid[padY][padX] > 0) {
+					gridPrograms[blockIndexInt]->startTouch(touch.startX, touch.startY);
+				}
 
 				const std::string patternString = "/block/lightpad/" + blockIndex + "/on";
 				OSCAddressPattern pattern = OSCAddressPattern(patternString);
