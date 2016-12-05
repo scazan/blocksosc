@@ -229,7 +229,9 @@ public:
 					std::cout << "found block" << blockIndex << std::endl;
 					blockIndex++;
 
-					//break;
+				}
+				else {
+					break;
 				}
             }
         }
