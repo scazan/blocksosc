@@ -65,12 +65,13 @@ struct SynthGrid
     {
         gridFillArray.clear();
 
-        for (int i = 0; i < numRows; ++i)
+        for (int i = 0; i < numRows; i++)
         {
-            for (int j = 0; j < numColumns; ++j)
+            for (int j = 0; j < numColumns; j++)
             {
                 DrumPadGridProgram::GridFill fill;
-				int colorIndex = buttonGrid[i%5][j%5];
+				//int colorIndex = buttonGrid[i%5][std::abs( j-4 )%5];
+				int colorIndex = buttonGrid[j%5][std::abs( i-4 )%5];
 				fill.colour = getColorFromIndex(colorIndex);
 
 
@@ -266,9 +267,9 @@ private:
         {
 			float touchIndex = (float) touch.index,
 				  startX = (float) touch.startX,
-				  startY = (float) touch.startY,
+				  startY = (float) std::abs(touch.startY - 2),
 				  x = (float) touch.x,
-				  y = (float) touch.y,
+				  y = (float) std::abs(touch.y - 2.0),
 				  z = (float) touch.z;
             // Limit the number of touches per second
             constexpr int maxNumTouchMessagesPerSecond = 100;
@@ -281,12 +282,12 @@ private:
 				int padX=0,
 					padY=0;
 
-				padX = (int)(touch.startX/0.4);
-				padY = (int)(touch.startY/0.4);
+				padX = (int)(startX/0.4);
+				padY = (int)(startY/0.4);
 
-				// TODO: THIS IS WEIRD. Why are the x,y values inverting. INVESTIGATE
-				if(buttonGrid[padY][padX] > 0) {
-					gridPrograms[blockIndexInt]->startTouch(touch.startX, touch.startY);
+				if(buttonGrid[padX][padY] > 0) {
+					// We are constantly switching between drawing in 1-0 and translating to 0-1. This why we need the "touch.startY" here
+					gridPrograms[blockIndexInt]->startTouch(startX, touch.startY);
 				}
 
 				const std::string patternString = "/block/lightpad/" + blockIndex + "/on";
@@ -304,7 +305,6 @@ private:
 				OSCAddressPattern pattern = OSCAddressPattern(patternString);
 				if (! sender.send (pattern, touchIndex, x/2, y/2))
 					showConnectionErrorMessage ("Error: could not send OSC message.");
-				//bitmapProgram->setLED(roundToInt((touch.startX/2) * 16), roundToInt((touch.startY/2) * 16), Colours::black);
             }
             else
             {
