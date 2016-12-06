@@ -2,14 +2,9 @@
 A program to transmit OSC data directly from the ROLI Lightpad Block.
 By default, it also turns off the LEDs and only uses them to show touch data while performing.
 
-<<<<<<< HEAD
-
 ###[Project Page Here](https://scazan.github.io/BlocksOSC/)
 or
 ###[Download BlocksOSC Here](https://github.com/scazan/BlocksOSC/releases)
-=======
-https://scazan.github.io/BlocksOSC/
->>>>>>> dev
 
 Currently transmits OSC messages to localhost, port 57120 with the following messages:
 
