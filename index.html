@@ -43,13 +43,18 @@ By default, it also turns off the LEDs and only uses them to show touch data whi
 <p>Currently transmits OSC messages to localhost, port 57120 with the following messages:</p>
 
 <pre><code>/block/lightpad/0/on - (fingerIndex, x, y, z)
-/block/lightpad/0/off - (fingerIndex)
+/block/lightpad/0/off - (fingerIndex, x, y)
 /block/lightpad/0/position - (fingerIndex, x, y, z)
 /block/lightpad/0/button - (1)
 </code></pre>
-
-<p>Receives OSC data on port 57140 in order to add "buttons" to the block:</p>
-
+          
+          <p>To receive from a second Lightpad block change the 0 to a 1 like so:</p>
+<pre><code>/block/lightpad/1/on - (fingerIndex, x, y, z)
+/block/lightpad/1/off - (fingerIndex, x, y)
+/block/lightpad/1/position - (fingerIndex, x, y, z)
+/block/lightpad/1/button - (1)
+</code></pre>
+          
 <pre><code>/block/lightpad/0/addButton - (x, y, (int)color)
 The x,y coordinates specify a button created on the Lightpad in a 5x5 matrix.
 The color is an integer representing:
