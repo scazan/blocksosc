@@ -2,7 +2,7 @@
 A program to transmit OSC data directly from the ROLI Lightpad Block.
 By default, it also turns off the LEDs and only uses them to show touch data while performing.
 
-###[Project Page Here](https://scazan.github.io/BlocksOSC/)
+###[Project Page Here](https://scazan.github.io/blocksosc/)
 or
 ###[Download BlocksOSC Here](https://github.com/scazan/BlocksOSC/releases)
 
